@@ -16,10 +16,12 @@ The aim is to build a machine learning model that predicts the energy consumed d
 
 | Enrollment No. | Name |
 |---|---|
+| S24CSEU1873 | Surya Pratap Singh Rathod |
+| S24CSEU1869 | Akritah Sahu |
 | S24CSEU1862 | Deepansh Dhama |
 | S24CSEU0052 | Kunal Paliwal |
-| S24CSEU1869 | Akritah Sahu |
-| S24CSEU1873 | Surya Pratap Singh Rathod |
+
+
 
 ## Tools & Technologies
 
