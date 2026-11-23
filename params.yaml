@@ -1,0 +1,21 @@
+# MP236 model training parameters
+
+target_column: energy_kwh
+
+data:
+  train_path: data/processed/train_cleaned.csv
+  later_path: data/raw/later.csv
+
+training:
+  test_size: 0.2
+  random_state: 42
+
+model:
+  name: RandomForestRegressor
+  n_estimators: 100
+  max_depth: 10
+  min_samples_split: 2
+  min_samples_leaf: 1
+
+mlflow:
+  experiment_name: MP236_EV_Energy_Prediction

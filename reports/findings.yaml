@@ -1,0 +1,70 @@
+# MP236 findings --- fill in every value, keep every key.
+# The marking tool reads this file. Write null only where the comment says so.
+# Use the exact column names and group values from your data files.
+
+group_id: "G200"          # your group id, e.g. "G042"
+problem_id: "MP236"
+
+
+data_issues:
+  # For each of the 7 kinds: present: true or false.
+  # If present is false, leave the other values as null.
+  leaking_column:
+    present: true
+    column: kwh_billed_in_app
+
+  unit_mixup:
+    present: true
+    column: session_minutes
+    group_value: Highway
+    factor: 60
+
+  sentinel_value:
+    present: false
+    column: null
+    value: null
+    count: null
+
+  duplicate_rows:
+    present: false
+    count: null
+
+  stuck_sensor:
+    present: true
+    column: vehicle_age_yr
+    start_date: "2026-02-15"
+    end_date: "2026-03-03"
+
+  target_typos:
+    present: false
+    count: null
+
+  spelling_variants:
+    present: true
+    column: vehicle
+    true_levels: 3
+
+
+tracking:
+  experiment_name: "MP236_EV_Energy_Prediction"
+  best_run_id: "ad1dbf0ae5484cc1be61bad57af4c553"        # the MLflow run id of your v1 model
+  registered_model_name: "MP236_EV_Energy_Prediction_Model"
+  champion_version: 1
+
+monitoring:
+  psi:                     # cleaned train.csv vs later.csv, 10 bins
+    battery_start_pct: null
+    session_minutes: null
+    charger_kw: null
+    temp_c: null
+    vehicle_age_yr: null
+    queue_before: null
+  most_drifted_feature: null
+  mae_by_group:            # v1 on later.csv, per value of station_type
+    'Mall': null
+    'Highway': null
+    'Residential': null
+  worst_served_group: null
+  mae_v1_on_check: null    # v1 on the last 30% of later.csv (by date)
+  mae_v2_on_check: null    # v2 on the same rows
+  decision: null           # promote or keep
