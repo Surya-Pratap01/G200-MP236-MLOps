@@ -1,0 +1,36 @@
+# Environments and VCS
+.venv/
+.git/
+.github/
+.dvc/
+.vscode/
+.env
+
+# Python caches
+__pycache__/
+*.py[cod]
+.pytest_cache/
+
+# Local MLflow tracking data: the API loads models/model.joblib instead
+mlruns/
+mlartifacts/
+mlflow.db
+mlflow.db-shm
+mlflow.db-wal
+
+# Raw / generated data and outputs (not needed at runtime)
+data/
+reports/
+predictions/
+
+# Not part of the runtime image
+tests/
+src/
+k8s/
+*.md
+Dockerfile
+.dockerignore
+
+# Temporary files
+*.log
+*.tmp

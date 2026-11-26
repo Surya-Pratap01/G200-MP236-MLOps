@@ -1,0 +1,41 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mp236-api
+  labels:
+    app: mp236-api
+spec:
+  replicas: 4
+  selector:
+    matchLabels:
+      app: mp236-api
+  template:
+    metadata:
+      labels:
+        app: mp236-api
+    spec:
+      containers:
+        - name: mp236-api
+          image: mp236-api:1.0
+          imagePullPolicy: IfNotPresent   # image is built/loaded locally, not pulled from a registry
+          ports:
+            - containerPort: 8000
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8000
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8000
+            initialDelaySeconds: 20   # longer than readiness, as the client requires
+            periodSeconds: 15

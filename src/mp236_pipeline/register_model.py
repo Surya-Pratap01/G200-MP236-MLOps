@@ -1,8 +1,12 @@
+import sys
+
 import mlflow
 
 
 # Winning model details
-BEST_RUN_ID = "ad1dbf0ae5484cc1be61bad57af4c553"
+# Pass your own comparison run id as an argument if it differs from the default:
+#   python src/mp236_pipeline/register_model.py <run_id>
+BEST_RUN_ID = sys.argv[1] if len(sys.argv) > 1 else "ad1dbf0ae5484cc1be61bad57af4c553"
 MODEL_PATH = "model_pipeline"
 MODEL_NAME = "MP236_EV_Energy_Prediction_Model"
 
