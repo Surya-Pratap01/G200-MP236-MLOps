@@ -54,7 +54,46 @@ The project will cover the following stages:
 
 This repository contains the code, configurations, tests and documentation developed by Group G200 for the assigned problem.
 
-*Project currently under development.*
+## Stage 3: API, Docker, CI, Kubernetes
+
+**Model artifact.** The API loads `models/model.joblib` (override with `MP236_MODEL_PATH`); it never reads a local MLflow registry. Whoever holds `mlflow.db` creates it once and commits it, together with `models/model_meta.json`:
+
+```bash
+python src/mp236_pipeline/export_model.py            # registered Version 1
+python src/mp236_pipeline/export_model.py --model-uri "models:/MP236_EV_Energy_Prediction_Model@champion" --version 1
+```
+
+**Run the API locally**
+
+```bash
+pip install -r requirements.txt
+uvicorn app.main:app --host 127.0.0.1 --port 8000   # docs at http://127.0.0.1:8000/docs
+```
+
+- `GET /health` returns `{"status": "ok", ...}`
+- `POST /predict` takes the eight feature fields (`PROBLEM.md` section 5) and returns `prediction` (kWh). `queue_before > 20` and `session_minutes < 5` are rejected with 422 by the schema. `session_minutes` is always in minutes, Highway included.
+- Logs are one JSON line per request on stdout.
+
+**Docker**
+
+```bash
+docker build -t mp236-api:1.0 .
+docker run --rm -p 8000:8000 mp236-api:1.0
+docker logs <container>
+```
+
+**Kubernetes** (Docker Desktop or Minikube; with Minikube run `minikube image load mp236-api:1.0` first)
+
+```bash
+kubectl apply -f k8s/
+kubectl get deployments,pods,services
+kubectl port-forward service/mp236-svc 8000:80
+kubectl logs deployment/mp236-api
+```
+
+**Tests** need no CSV files or MLflow: `pytest -v`. Tests on the real cleaned dataset are skipped unless `data/processed/train_cleaned.csv` exists.
+
+*Stage 4 (drift monitoring, retraining, holdout predictions) is still to do.*
 
 ---
 

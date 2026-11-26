@@ -1,0 +1,14 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: mp236-svc
+  labels:
+    app: mp236-api
+spec:
+  type: ClusterIP
+  selector:
+    app: mp236-api        # must match the Pod labels in deployment.yaml
+  ports:
+    - protocol: TCP
+      port: 80            # Service port
+      targetPort: 8000    # container port

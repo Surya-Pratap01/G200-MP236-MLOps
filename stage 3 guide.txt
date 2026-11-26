@@ -1,0 +1,261 @@
+01  |  START HERE
+Where the project stands
+Use this page to understand the handoff before opening VS Code.
+COMPLETED IN STAGE 1–2	CONFIRMED RESULT
+Data investigation	Seven data-quality checks implemented in data_checks.py; findings recorded in reports/findings.yaml.
+Preprocessing	Leakage column removed; Highway session duration converted from seconds to minutes; vehicle spellings normalized; 92 stuck-sensor readings marked missing.
+Automated tests	7 pytest tests passed in the teammate handoff checkpoint.
+MLflow	Experiment: MP236_EV_Energy_Prediction. Random Forest and Extra Trees compared.
+Selected model	Random Forest comparison run selected: MAE 2.5815, RMSE 3.2494, R2 0.8984.
+Registry	MP236_EV_Energy_Prediction_Model, Version 1, shown READY.
+
+Repository access: confirm before cloning
+1.  Open the shared repository and go to Settings → Collaborators.
+2.  Under Manage access, confirm the teammate’s exact GitHub username is listed and the invitation is no longer pending.
+3.  The teammate needs Write permission to create and push branches. If her username is missing or the invitation is pending, the repository owner must invite her and she must accept it while signed in to the correct GitHub account.
+WHAT THE OWNER’S ACCESS SCREEN SHOWED
+The screenshot showed 3 collaborators listed: akritah, Deepansh011 and Nand3mo. Check that the intended Stage 3 teammate is one of these accounts. Do not assume access from a display name alone; match the exact GitHub username.
+
+Clone the shared repository (on her computer)
+git clone https://github.com/Surya-Pratap01/G200-MP236-MLOps.git
+cd G200-MP236-MLOps
+git remote -v
+git switch main
+git pull origin main
+git log -1 --oneline
+
+Expected remote: origin should point to Surya-Pratap01/G200-MP236-MLOps. The shared Stage 2 checkpoint was commit 4d91a5a; if main has advanced since then, use the latest main rather than resetting to the old hash.
+Create her own Stage 3 branch
+git switch -c stage-3-deployment-<githubusername>
+
+•	Replace <githubusername> with the actual username and remove the angle brackets; do not type the placeholder literally. Example branch: stage-3-deployment-akritah.
+02  |  LOCAL SETUP
+Set up identity, data and the model
+This is the most important handoff detail: GitHub does not contain the owner’s local MLflow database or model artifacts.
+Configure her commit identity
+git config --local user.name "Her Full Name"
+git config --local user.email "her-verified-github-email@example.com"
+git config --local --get user.name
+git config --local --get user.email
+
+•	Use an email verified on her GitHub account (or her GitHub noreply email).
+•	These commands set the commit author identity. They do not authenticate a push. She must also be signed into GitHub with her own account in Git Credential Manager, GitHub CLI or GitHub Desktop.
+gh auth status
+
+If GitHub CLI is not installed, use the account connected to Git Credential Manager or GitHub Desktop. When pushing, confirm the browser/device login belongs to her account, not the repository owner.
+Install the project environment
+py -3.12 -m venv .venv
+.\.venv\Scripts\Activate.ps1
+python -m pip install --upgrade pip
+pip install -r requirements.txt
+pip install dvc
+
+•	If PowerShell blocks activation, use the approved local PowerShell execution policy or activate the environment from the VS Code Python interpreter selector. Do not disable machine-wide security settings.
+•	The project used Python 3.12 in the verified local test environment. Keep local and CI Python versions aligned where possible.
+Get the DVC-managed data
+dvc remote list
+dvc pull
+dvc status
+Get-ChildItem data\raw
+
+•	The raw train/later datasets are DVC-managed. Git clone alone may download only DVC pointer files, not the CSV contents.
+•	If dvc pull says no remote is configured, remote not found, authentication failed, or data is unavailable, stop and ask the repository owner to provide the configured remote and access. Do not invent a remote URL or commit credentials.
+•	Never paste access tokens, cloud keys or passwords into source files or the repository. Use local DVC credentials or GitHub Actions Secrets where needed.
+IMPORTANT: MLflow IS LOCAL IN THE CURRENT PROJECT SETUP
+The owner intentionally ignored mlflow.db and mlruns/ in .gitignore, so those local tracking files and the registered model artifact are not copied by Git clone. Her fresh clone will not automatically have Run ID 5d9b... or the owner’s model registry. She must recreate a local model/artifact or receive a model from a shared tracking/artifact store before building the API.
+
+Recreate a local model if no shared MLflow server/artifact store is provided
+python src/mp236_pipeline/preprocessing.py
+python src/mp236_pipeline/train.py
+python src/mp236_pipeline/compare_models.py
+
+•	Use the best Random Forest comparison Run ID printed by compare_models.py on her machine. Run IDs are newly generated and will differ from the owner’s Run ID.
+•	Before running register_model.py, replace its hard-coded BEST_RUN_ID with her own best comparison Run ID. Then register locally and verify that the local registry has Version 1 READY. If the version number differs, update the model URI in verify_model.py and app/main.py to the actual version.
+•	Run verify_model.py after registering to prove that the locally registered model can load and predict.
+•	Before FastAPI/Docker work, agree with the owner where the portable model artifact will live. Preferred: shared MLflow tracking/artifact storage. Local alternative: export the model under an agreed models/ path and share that artifact using the configured DVC remote. Do not copy mlflow.db/mlruns wholesale into Git.
+•	Ask the owner to confirm the exact model path and loading method before writing app/main.py. The API container must access the model at runtime; a model URI pointing to the owner’s local registry is not portable.
+Choose one model handoff method before API coding
+OPTION	TEAM ACTION	WHEN IT FITS
+Shared MLflow	Configure the teammate machine and API to use the same remote tracking URI and artifact store; verify the registered version can be loaded from both.	Best if the group already has centrally hosted MLflow and shared artifact storage.
+Portable model via DVC	Export the registered model under an agreed models/ path, add that directory to DVC, then dvc push. The teammate runs dvc pull before building the API/container.	Good fit if a DVC remote is configured and all members can access it.
+Owner-provided export	The owner shares the exported model directory through agreed project storage. The teammate places it at the exact path used by the app and Docker build.	One-time handoff; still document the model version and path.
+
+DO NOT MIX APPROACHES
+Pick one agreed model source and one path. FastAPI and Docker must both use that same source. Do not depend on a developer laptop’s mlflow.db or mlruns folder.
+
+03  |  TUESDAY, 24 NOVEMBER
+Day 1 — Build the FastAPI service
+Goal: expose the registered model through a tested HTTP API.
+Inspect the existing scaffold first
+•	Check whether app/main.py already exists. The starter project may contain a placeholder. Update the existing file rather than creating a duplicate app folder.
+•	Suggested structure (adapt to the repository’s actual files):
+app/
+  __init__.py
+  main.py
+  schemas.py        # optional: Pydantic request/response models
+models/             # portable model artifact, if using local export
+src/mp236_pipeline/ # existing training / preprocessing code
+
+Required endpoints
+ENDPOINT	EXPECTED BEHAVIOUR	HOW TO VERIFY
+GET /health	Return HTTP 200 and a small JSON status showing the API/model is ready.	Open /health in browser or curl.
+POST /predict	Validate one EV charging record, call model.predict(), return predicted energy_kwh in kWh.	Use Swagger /docs with valid sample input.
+
+Prediction input contract
+FIELD	TYPE / RULE
+battery_start_pct	Number; percentage value.
+session_minutes	Number in MINUTES for every station type. Highway input must already be converted to minutes.
+charger_kw	Number; charger power in kW.
+temp_c	Number; temperature in Celsius.
+vehicle_age_yr	Number or null; the trained pipeline imputes missing numeric values.
+queue_before	Integer or numeric queue count.
+vehicle	One of: car, three_wheeler, two_wheeler.
+station_type	One of: Mall, Highway, Residential (match training categories).
+
+MODEL URI WARNING
+Do not assume models:/MP236_EV_Energy_Prediction_Model/1 exists on a fresh teammate machine. It exists only in the owner’s local MLflow registry unless a shared tracking server is configured. For Docker, the API must load a model artifact available inside the container or connect to an intentionally configured shared MLflow server.
+
+Implementation checklist
+•	Load the model once at application startup; do not reload it for every request.
+•	Use Pydantic for input validation and reject unsupported vehicle/station categories with a clear 4xx response.
+•	Create a pandas DataFrame with the exact eight feature columns and expected column names before calling predict().
+•	Return a JSON response such as {"predicted_energy_kwh": 27.4, "model_version": "1"}.
+•	Do not accept or use kwh_billed_in_app: it is a leakage column and is unavailable at prediction time.
+•	Handle model-load errors and prediction errors cleanly. Do not expose local file paths, secrets or stack traces in API responses.
+Run and test locally
+pip install fastapi "uvicorn[standard]"
+uvicorn app.main:app --reload --host 127.0.0.1 --port 8000
+
+•	Open http://127.0.0.1:8000/docs and test a valid POST /predict request.
+•	Test GET /health, one valid prediction, a missing/invalid field, and an unsupported category. Record the HTTP status and response.
+•	Add API dependencies to requirements.txt so another machine and Docker can install them.
+04  |  WEDNESDAY, 25 NOVEMBER
+Day 2 — Docker and GitHub Actions
+Goal: make the API reproducible in a container and automate checks on every push / pull request.
+Docker deliverables
+•	Inspect the existing root Dockerfile before editing; do not overwrite useful starter configuration without checking it.
+•	Use a Python 3.12 base image, install requirements.txt, copy only application code and the agreed portable model artifact, expose port 8000, and run Uvicorn on 0.0.0.0:8000.
+•	Add or update .dockerignore to exclude .venv/, .git/, __pycache__/, .pytest_cache/, mlruns/, mlflow.db, raw training data and temporary files. Include the actual portable model path required by the app.
+•	Never bake GitHub tokens, DVC credentials, passwords or the owner’s local MLflow database into the image.
+Build and run
+docker --version
+docker build -t mp236-api:stage3 .
+docker run --rm -p 8000:8000 mp236-api:stage3
+
+•	Open http://127.0.0.1:8000/docs and test /health and /predict while the container is running.
+•	The model artifact must exist in the Docker build context. A models:/ registry URI that points to a developer’s local mlflow.db will not work in a clean container.
+GitHub Actions CI
+•	Inspect any existing .github/workflows/ci.yml first. Update it rather than creating duplicate workflows that run the same tests.
+•	Workflow should trigger on push and pull_request to main / the Stage 3 branch as appropriate, set up Python 3.12, install dependencies, prepare test data or test fixtures, run pytest, and build the Docker image.
+•	Keep CI deterministic: pin important dependency versions, set a working directory, and fail the job if tests or Docker build fail.
+CI DATA TRAP — FIX THIS BEFORE EXPECTING GREEN CHECKS
+The current tests read data/processed/train_cleaned.csv, but data/processed/ is ignored by Git. A clean GitHub Actions runner will not have that file. The workflow must first obtain the DVC-managed raw data (if the remote is available and credentials are configured) and run preprocessing.py, OR the tests must be refactored to use small checked-in synthetic fixtures. Do not commit the full processed dataset just to silence CI.
+
+If CI needs DVC remote access
+•	Confirm dvc remote list and dvc pull work on a clean teammate machine before designing the workflow.
+•	If the remote needs authentication, store credentials as GitHub Actions Secrets and configure DVC securely in the workflow. Never put credentials in ci.yml.
+•	A useful CI sequence is: checkout → setup Python → install requirements + required DVC remote plugin → configure DVC credentials from Secrets if needed → dvc pull → run preprocessing.py → pytest -v → docker build.
+05  |  THURSDAY, 26 NOVEMBER
+Day 3 — Kubernetes and application logging
+Goal: run the same containerized API as a Kubernetes workload and make it observable.
+Kubernetes files
+•	Inspect the existing k8s/ folder first. The project scaffold may already include YAML placeholders.
+FILE	PURPOSE
+k8s/deployment.yaml	Defines the application Deployment, container image, port, replica count, environment and health probes.
+k8s/service.yaml	Exposes the Deployment inside the cluster; use the service type required by the local cluster/demo.
+
+Choose and verify the local cluster
+•	Confirm which cluster is available: Docker Desktop Kubernetes or Minikube. Do not assume a cluster is running.
+kubectl version --client
+kubectl config current-context
+kubectl get nodes
+
+•	Build the image and make it available to the selected cluster. Docker Desktop and Minikube may require different image-loading steps. Set imagePullPolicy appropriately for a local-only image.
+Deploy and inspect
+kubectl apply -f k8s/
+kubectl get deployments
+kubectl get pods
+kubectl get services
+kubectl describe pod <pod-name>
+kubectl logs <pod-name>
+
+•	Wait until the pod is Ready. If it is in ImagePullBackOff, verify the image name/tag and how the image was loaded into the cluster.
+•	Test the service using the configured NodePort / LoadBalancer / port-forward approach. For a local demo, port-forwarding is often simplest: kubectl port-forward service/<service-name> 8000:8000.
+•	Verify /health and /predict through the Kubernetes service, not only on localhost outside the cluster.
+Logging requirements
+•	Use Python logging to write structured, readable logs to stdout/stderr so Docker and Kubernetes can collect them.
+•	Log service startup/shutdown, request method and path, response status, duration, prediction success/failure and exception category.
+•	Do not log secrets, access tokens, full sensitive payloads or unnecessary personal data.
+•	Show logs with docker logs <container> and kubectl logs <pod-name>. Include timestamps and log levels.
+DAY 3 EXIT CHECK
+Only mark Stage 3 complete after the deployment is Ready, the Kubernetes Service can reach /health and /predict, logs are visible, and the GitHub Actions check is green on the Pull Request. The full sign-off checklist is on the final page.
+
+06  |  SHARED GITHUB WORKFLOW
+Every member commits from their own GitHub account
+This is the correct workflow for an invited collaborator with Write access. No fork is needed.
+THE IMPORTANT DISTINCTION
+A Git commit records the name/email configured in Git. A Git push is authenticated separately by the GitHub account used in Credential Manager / GitHub CLI / GitHub Desktop. Both must belong to the teammate who is making the contribution.
+
+Commit and push her own branch to the shared repository
+•	Each contributor should use a separate branch named with their GitHub username (or assigned task + username). Do not have multiple members commit under one shared Git identity or push their work directly to main.
+# Check current branch and remote
+git branch --show-current
+git remote -v
+
+# See changed files
+git status --short
+
+# Review whitespace before staging
+git diff --check
+
+# Stage only the files she changed
+git add app/ Dockerfile .dockerignore .github/workflows/ci.yml k8s/ requirements.txt
+
+# Review exactly what will be committed
+git status --short
+git diff --cached --check
+git diff --cached --stat
+
+# Commit under her configured Git identity
+git commit -m "Add Stage 3 API and deployment workflow"
+
+# Push the branch directly to the shared repository
+git push -u origin stage-3-deployment-<githubusername>
+
+Only stage paths that actually exist and were changed. If she owns a smaller task, stage only those files. Avoid git add . until she has reviewed status and confirmed no local data, secrets, .venv, mlruns or generated files are included.
+Open a Pull Request (PR)
+1.  Open the original repository: github.com/Surya-Pratap01/G200-MP236-MLOps.
+2.  GitHub should show a Compare & pull request prompt after the branch is pushed. Click it, or open Pull requests → New pull request.
+3.  Base repository: Surya-Pratap01/G200-MP236-MLOps; base branch: main.
+4.  Compare branch: stage-3-deployment-<githubusername> (or her assigned branch).
+5.  Describe what she implemented, commands used, test evidence, screenshots if useful, and any known issue. Create the Pull Request.
+6.  Ask the repository owner / another teammate to review it. Resolve feedback, push fixes to the same branch, then merge only after checks pass and the team agrees.
+07  |  HANDOVER CLOSE-OUT
+Final checklist and common blockers
+Use this before telling the group that Stage 3 is ready for review.
+Stage 3 completion checklist
+☐  I cloned the original shared repository, not a fork.
+☐  My exact GitHub username is listed as a collaborator and I can push a branch.
+☐  My local Git name/email are configured for my own GitHub identity; push authentication uses my own account.
+☐  I created and worked on my own Stage 3 branch, not main.
+☐  DVC data are available locally, or the team agreed on the required data/model handoff.
+☐  I confirmed how the local MLflow model will be made available to the API and Docker container.
+☐  GET /health and POST /predict work locally, including invalid-input handling.
+☐  Docker image builds and the container serves the API.
+☐  GitHub Actions CI runs deterministically and shows green checks.
+☐  Kubernetes Deployment and Service are healthy and the API works through the Service.
+☐  Application logs are visible and do not expose secrets or sensitive payloads.
+☐  I reviewed staged files, committed my own changes, pushed my branch and opened a PR to the shared main branch.
+Common blockers
+PROBLEM	WHAT TO CHECK
+Cannot push to origin	Correct GitHub account signed in? Invitation accepted? Username listed with Write access? Correct remote URL?
+DVC pull fails	Is a remote configured? Is the remote reachable? Does the teammate have storage credentials / remote access? Do not commit secrets.
+Model URI not found	Expected on a fresh clone because mlflow.db and mlruns are local/ignored. Recreate the model locally or use the agreed shared model artifact.
+CI cannot find train_cleaned.csv	The file is generated and ignored. Run DVC pull + preprocessing in CI, or change tests to use fixtures.
+Docker starts but API cannot load model	The model artifact is not inside the image or the configured shared model store is unavailable. Check the model path and container working directory.
+Kubernetes ImagePullBackOff	The cluster cannot see the local image or image tag. Load/build the image for the active cluster and check the Deployment image field.
+
+HANDOFF RULE
+Do one small task at a time. Test locally, commit from the contributor’s own GitHub identity, push that contributor’s branch to the original shared repository, and use a Pull Request for review. Never put mlflow.db, mlruns/, .venv/, DVC credentials or raw/generated datasets into Git by accident.
+
+Reference repository: https://github.com/Surya-Pratap01/G200-MP236-MLOps
