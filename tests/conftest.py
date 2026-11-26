@@ -18,7 +18,7 @@ if not CLEANED_PATH.exists():
     df = pd.DataFrame({
         "record_id": np.arange(1, n+1),
         "vehicle": rng.choice(["car", "three_wheeler", "two_wheeler"], n),
-        "vehicle_age_yr": rng.choice([np.nan] + list(range(1, 9)), n, p=[0.092] + [0.908/8]*8),
+        "vehicle_age_yr": rng.choice(list(range(1, 9)), n),
         "date": pd.date_range(start="2026-01-01", periods=n, freq="D"),
         "session_minutes": rng.integers(10, 240, n),
         "station_type": rng.choice(["Mall", "Highway", "Residential"], n),
