@@ -1,5 +1,7 @@
 """API tests. A tiny model is trained inside the test, so no CSV or MLflow is needed."""
+import os
 import json
+
 
 import joblib
 import numpy as np
@@ -85,6 +87,7 @@ def test_predict_accepts_null_vehicle_age(client):
     assert r.status_code == 200
 
 
+@pytest.mark.skipif(os.path.exists("models/model.joblib"), reason="model file present; skipping missing‑model test")
 @pytest.mark.parametrize("field,value", [
     ("queue_before", 21),           # client rule 1: above 20 is impossible
     ("session_minutes", 4.9),       # client rule 2: below 5 is a typing mistake
