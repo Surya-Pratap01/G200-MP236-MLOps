@@ -1,0 +1,14 @@
+section,metric,value,role,row_count,train_missing,later_missing,notes
+psi_audit,battery_start_pct,0.040872,prediction_feature,300,0,0,bins=10; missing=excluded_after_explicit_count
+psi_audit,session_minutes,0.034407,prediction_feature,300,0,0,bins=10; missing=excluded_after_explicit_count
+psi_audit,charger_kw,0.031939,prediction_feature,300,0,0,bins=10; missing=excluded_after_explicit_count
+psi_audit,temp_c,0.020553,prediction_feature,300,0,0,bins=10; missing=excluded_after_explicit_count
+psi_audit,vehicle_age_yr,0.047733,prediction_feature,300,106,0,bins=10; missing=excluded_after_explicit_count
+psi_audit,queue_before,4.581434,prediction_feature,300,0,0,bins=10; missing=excluded_after_explicit_count
+psi_audit,energy_kwh,0.69651,target_audit,300,0,0,bins=10; missing=excluded_after_explicit_count
+v1_group_mae,Mall,20.509468,station_type,110,0,0,V1 model.joblib on later.csv
+v1_group_mae,Highway,14.914401,station_type,128,0,0,V1 model.joblib on later.csv
+v1_group_mae,Residential,15.896561,station_type,62,0,0,V1 model.joblib on later.csv
+summary,most_drifted_feature,queue_before,prediction_feature,300,0,0,max_psi=4.581434
+summary,worst_served_group,Mall,station_type,110,0,0,max_mae=20.509468
+summary,v1_overall_mae_later,17.168905,all_later_rows,300,0,0,All 300 rows of later.csv
