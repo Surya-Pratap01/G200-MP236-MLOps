@@ -1,5 +1,5 @@
 {
   "model_name": "MP236_EV_Energy_Prediction_Model",
-  "model_version": "1",
-  "source_uri": "runs:/b88d80e3fc4844d4b2c4a5e384cdec84/random_forest_pipeline"
+  "model_version": "2",
+  "source_uri": "models:/MP236_EV_Energy_Prediction_Model@champion"
 }
